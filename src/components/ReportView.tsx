@@ -16,31 +16,8 @@ export default function ReportView({ result, onReset, shared = false }: Props) {
   const [copied, setCopied] = useState(false)
   const [shareState, setShareState] = useState<ShareState>('idle')
   const [shareUrl, setShareUrl] = useState('')
+  const [shareError, setShareError] = useState('')
   const { markdown, screenshot, meta } = result
-
-  async function handleShare() {
-    // 이미 만든 링크가 있으면 클립보드에 다시 복사
-    if (shareUrl) {
-      await navigator.clipboard.writeText(shareUrl).catch(() => {})
-      setShareState('done')
-      return
-    }
-    setShareState('creating')
-    const res = await createShareLink(result)
-    if (res.ok) {
-      setShareUrl(res.url)
-      setShareState('done')
-      await navigator.clipboard.writeText(res.url).catch(() => {})
-      // 주소창도 공유 URL로 갱신
-      try {
-        window.history.replaceState({}, '', new URL(res.url).search)
-      } catch {
-        /* noop */
-      }
-    } else {
-      setShareState('error')
-    }
-  }
 
   async function copyMarkdown() {
     try {
@@ -63,115 +40,129 @@ export default function ReportView({ result, onReset, shared = false }: Props) {
     URL.revokeObjectURL(url)
   }
 
+  async function handleShare() {
+    if (shareUrl) {
+      await navigator.clipboard.writeText(shareUrl).catch(() => {})
+      setShareState('done')
+      return
+    }
+    setShareState('creating')
+    setShareError('')
+    const res = await createShareLink(result)
+    if (res.ok) {
+      setShareUrl(res.url)
+      setShareState('done')
+      await navigator.clipboard.writeText(res.url).catch(() => {})
+      try {
+        window.history.replaceState({}, '', new URL(res.url).search)
+      } catch {
+        /* noop */
+      }
+    } else {
+      setShareError(res.error)
+      setShareState('error')
+    }
+  }
+
+  // 상태 요약 (중복·색상 최소화: 중립 텍스트 한 줄)
+  const statusBits: string[] = [
+    meta.screenshotCaptured ? '스크린샷 포함' : '스크린샷 없음',
+    meta.repoAnalyzed ? 'GitHub 소스 분석' : 'GitHub 미분석',
+  ]
+  if (meta.perspectives && meta.perspectives.length > 0) {
+    statusBits.push(`관점: ${meta.perspectives.join('·')}`)
+  }
+
   return (
-    <div className="animate-fade-up space-y-5">
-      {/* 상단 액션 바 */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm text-ink-500">
-          <span className="material-icons-round text-green-500">task_alt</span>
-          <span className="font-semibold text-ink-900">{shared ? '공유된 리포트' : '분석 완료'}</span>
-          {!shared && (
-            <>
-              <span className="text-ink-300">·</span>
-              <span>{(meta.elapsedMs / 1000).toFixed(1)}초</span>
-            </>
-          )}
+    <div className="animate-fade-up space-y-4">
+      {/* 리포트 헤더 카드 */}
+      <div className="rounded-xl2 border border-ink-100 bg-white p-5 sm:p-6">
+        <div className="flex items-start gap-2">
+          <span className="material-icons-round mt-0.5 text-[20px] text-success">
+            {shared ? 'folder_shared' : 'task_alt'}
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-base font-bold text-ink-900">{meta.title}</h2>
+            <a
+              href={meta.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block truncate text-xs text-primary hover:underline"
+            >
+              {meta.url}
+            </a>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+
+        {/* 메타: 중립 텍스트 한 줄 */}
+        <p className="mt-3 text-xs text-ink-500">
+          <span className="font-medium text-ink-700">{meta.model}</span>
+          {!shared && <> · {(meta.elapsedMs / 1000).toFixed(1)}초 분석</>}
+          {' · '}
+          {statusBits.join(' · ')}
+        </p>
+
+        {/* 폴백 안내 (있을 때만, 절제된 스타일) */}
+        {meta.fallbacks && meta.fallbacks.length > 0 && (
+          <p className="mt-2 text-xs text-warn">
+            1순위 모델 폴백: {meta.fallbacks.join(' → ')} 실패 → {meta.model} 사용
+          </p>
+        )}
+
+        {/* 액션 */}
+        <div className="mt-4 flex flex-wrap gap-2">
           <button
             onClick={handleShare}
             disabled={shareState === 'creating'}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-pastel-pink-soft px-3 py-2 text-sm font-medium text-pink-600 transition hover:brightness-95 disabled:opacity-60"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-medium text-white transition hover:bg-primary-600 disabled:opacity-60"
           >
             <span className={`material-icons-outlined text-[18px] ${shareState === 'creating' ? 'animate-spin' : ''}`}>
               {shareState === 'creating' ? 'autorenew' : shareState === 'done' ? 'done' : 'share'}
             </span>
             {shareState === 'creating' ? '생성 중…' : shareState === 'done' ? '링크 복사됨' : '공유 링크'}
           </button>
-          <button
-            onClick={copyMarkdown}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-pastel-blue-soft px-3 py-2 text-sm font-medium text-blue-600 transition hover:brightness-95"
-          >
-            <span className="material-icons-outlined text-[18px]">{copied ? 'done' : 'content_copy'}</span>
+
+          <SecondaryButton onClick={copyMarkdown} icon={copied ? 'done' : 'content_copy'}>
             {copied ? '복사됨' : '복사'}
-          </button>
-          <button
-            onClick={downloadMarkdown}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-pastel-green-soft px-3 py-2 text-sm font-medium text-green-700 transition hover:brightness-95"
-          >
-            <span className="material-icons-outlined text-[18px]">download</span>
+          </SecondaryButton>
+          <SecondaryButton onClick={downloadMarkdown} icon="download">
             .md 저장
-          </button>
-          <button
-            onClick={onReset}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium text-ink-700 transition hover:bg-gray-200"
-          >
-            <span className="material-icons-outlined text-[18px]">refresh</span>
+          </SecondaryButton>
+          <SecondaryButton onClick={onReset} icon="add">
             새 분석
-          </button>
+          </SecondaryButton>
         </div>
-      </div>
 
-      {/* 공유 링크 결과 */}
-      {shareState === 'done' && shareUrl && (
-        <div className="flex items-center gap-2 rounded-xl bg-pastel-pink-soft px-3 py-2.5 text-sm animate-fade-up">
-          <span className="material-icons-outlined text-[18px] text-pink-500">link</span>
-          <input
-            readOnly
-            value={shareUrl}
-            onFocus={(e) => e.currentTarget.select()}
-            className="flex-1 bg-transparent text-pink-700 outline-none truncate"
-          />
-          <button
-            onClick={() => navigator.clipboard.writeText(shareUrl)}
-            className="shrink-0 rounded-lg bg-white/70 px-2.5 py-1 text-xs font-medium text-pink-600 hover:bg-white"
-          >
-            복사
-          </button>
-        </div>
-      )}
-      {shareState === 'error' && (
-        <p className="flex items-center gap-1.5 text-xs text-pink-600">
-          <span className="material-icons-outlined text-[16px]">error_outline</span>
-          공유 링크 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.
-        </p>
-      )}
-
-      {/* 메타 배지 */}
-      <div className="flex flex-wrap gap-2 text-xs">
-        <ModelBadge model={meta.model} fallbacks={meta.fallbacks} chain={meta.modelChain} />
-        <Badge ok icon="link" text={meta.url} truncate />
-        <Badge
-          ok={meta.screenshotCaptured}
-          icon="photo_camera"
-          text={meta.screenshotCaptured ? '스크린샷 포함' : '스크린샷 미포함'}
-        />
-        <Badge
-          ok={meta.repoAnalyzed}
-          icon="folder"
-          text={meta.repoAnalyzed ? 'GitHub 소스 분석됨' : 'GitHub 미분석'}
-        />
-        {meta.perspectives && meta.perspectives.length > 0 && (
-          <Badge ok icon="interests" text={`관점: ${meta.perspectives.join(', ')}`} />
+        {/* 공유 결과/오류 */}
+        {shareState === 'done' && shareUrl && (
+          <div className="mt-3 flex items-center gap-2 rounded-lg border border-ink-100 bg-ink-100/40 px-3 py-2 text-sm">
+            <span className="material-icons-outlined text-[18px] text-primary">link</span>
+            <input
+              readOnly
+              value={shareUrl}
+              onFocus={(e) => e.currentTarget.select()}
+              className="min-w-0 flex-1 bg-transparent text-ink-700 outline-none"
+            />
+            <button
+              onClick={() => navigator.clipboard.writeText(shareUrl)}
+              className="shrink-0 rounded-md bg-white px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary-50"
+            >
+              복사
+            </button>
+          </div>
+        )}
+        {shareState === 'error' && (
+          <p className="mt-3 flex items-start gap-1.5 text-xs text-danger">
+            <span className="material-icons-outlined text-[16px]">error_outline</span>
+            <span>{shareError || '공유 링크 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.'}</span>
+          </p>
         )}
       </div>
 
-      {/* 폴백 안내: 1순위가 실패해 다른 모델로 처리된 경우 */}
-      {meta.fallbacks.length > 0 && (
-        <p className="flex items-start gap-1.5 rounded-xl bg-pastel-yellow-soft px-3 py-2 text-xs text-yellow-700">
-          <span className="material-icons-outlined text-[16px] mt-0.5">info</span>
-          <span>
-            1순위 모델 호출이 실패하여 폴백되었습니다.{' '}
-            <span className="font-medium">{meta.fallbacks.join(' → ')}</span> 실패 →{' '}
-            <span className="font-semibold">{meta.model}</span> 으로 분석 완료.
-          </span>
-        </p>
-      )}
-
-      {/* 스크린샷 미리보기 */}
+      {/* 스크린샷 */}
       {screenshot && (
-        <div className="overflow-hidden rounded-xl2 border border-white shadow-card bg-white">
-          <div className="flex items-center gap-1.5 border-b border-ink-300/20 px-4 py-2 text-xs text-ink-500">
+        <div className="overflow-hidden rounded-xl2 border border-ink-100 bg-white">
+          <div className="flex items-center gap-1.5 border-b border-ink-100 px-4 py-2 text-xs text-ink-500">
             <span className="material-icons-outlined text-[16px]">image</span>
             캡처된 화면
           </div>
@@ -180,64 +171,29 @@ export default function ReportView({ result, onReset, shared = false }: Props) {
       )}
 
       {/* 마크다운 리포트 */}
-      <article className="report-prose bg-white/85 backdrop-blur rounded-xl2 shadow-soft border border-white p-6 sm:p-9">
+      <article className="report-prose rounded-xl2 border border-ink-100 bg-white p-6 sm:p-9">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown>
       </article>
     </div>
   )
 }
 
-function ModelBadge({
-  model,
-  fallbacks,
-  chain,
-}: {
-  model: string
-  fallbacks: string[]
-  chain: string[]
-}) {
-  const isPrimary = chain.length === 0 || model === chain[0]
-  const tooltip =
-    `호출된 모델: ${model}\n` +
-    `우선순위: ${chain.join(' → ') || '(기본)'}` +
-    (fallbacks.length ? `\n폴백됨: ${fallbacks.join(', ')}` : '')
-  return (
-    <span
-      title={tooltip}
-      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-medium ${
-        isPrimary ? 'bg-pastel-blue-soft text-blue-600' : 'bg-pastel-yellow-soft text-yellow-700'
-      }`}
-    >
-      <span className="material-icons-outlined text-[15px]">auto_awesome</span>
-      <span>{model}</span>
-      {isPrimary ? (
-        <span className="rounded-full bg-pastel-blue/50 px-1.5 text-[10px] text-blue-700">1순위</span>
-      ) : (
-        <span className="rounded-full bg-pastel-yellow/60 px-1.5 text-[10px] text-yellow-800">폴백</span>
-      )}
-    </span>
-  )
-}
-
-function Badge({
-  ok,
+function SecondaryButton({
+  onClick,
   icon,
-  text,
-  truncate,
+  children,
 }: {
-  ok: boolean
+  onClick: () => void
   icon: string
-  text: string
-  truncate?: boolean
+  children: React.ReactNode
 }) {
   return (
-    <span
-      className={`inline-flex max-w-full items-center gap-1.5 rounded-full px-3 py-1.5 font-medium ${
-        ok ? 'bg-pastel-green-soft text-green-700' : 'bg-gray-100 text-ink-500'
-      }`}
+    <button
+      onClick={onClick}
+      className="inline-flex items-center gap-1.5 rounded-lg border border-ink-200 bg-white px-3.5 py-2 text-sm font-medium text-ink-700 transition hover:border-primary/40 hover:text-primary"
     >
-      <span className="material-icons-outlined text-[15px]">{icon}</span>
-      <span className={truncate ? 'truncate max-w-[260px]' : ''}>{text}</span>
-    </span>
+      <span className="material-icons-outlined text-[18px]">{icon}</span>
+      {children}
+    </button>
   )
 }

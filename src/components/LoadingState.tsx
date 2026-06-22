@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 
 const STEPS = [
-  { icon: 'travel_explore', label: '웹페이지 접속 및 콘텐츠 수집', color: 'text-blue-400' },
-  { icon: 'photo_camera', label: '스크린샷 캡처', color: 'text-pink-500' },
-  { icon: 'folder_open', label: 'GitHub 소스코드 추출', color: 'text-green-600' },
-  { icon: 'auto_awesome', label: 'Gemini AI 종합 분석', color: 'text-yellow-600' },
-  { icon: 'description', label: '마크다운 리포트 생성', color: 'text-blue-500' },
+  { icon: 'travel_explore', label: '웹페이지 접속 및 콘텐츠 수집' },
+  { icon: 'photo_camera', label: '스크린샷 캡처' },
+  { icon: 'folder_open', label: 'GitHub 소스코드 추출' },
+  { icon: 'auto_awesome', label: 'Gemini AI 종합 분석' },
+  { icon: 'description', label: '마크다운 리포트 생성' },
 ]
 
 export default function LoadingState({ shared = false }: { shared?: boolean }) {
@@ -21,17 +21,17 @@ export default function LoadingState({ shared = false }: { shared?: boolean }) {
 
   if (shared) {
     return (
-      <div className="bg-white/90 backdrop-blur rounded-xl2 shadow-soft border border-white p-8 animate-fade-up flex items-center gap-3">
-        <span className="material-icons-round animate-spin text-blue-400">autorenew</span>
-        <h2 className="font-semibold text-ink-900">공유된 리포트를 불러오는 중…</h2>
+      <div className="rounded-xl2 border border-ink-100 bg-white p-8 animate-fade-up flex items-center gap-3">
+        <span className="material-icons-round animate-spin text-primary">autorenew</span>
+        <h2 className="font-semibold text-ink-900">리포트를 불러오는 중…</h2>
       </div>
     )
   }
 
   return (
-    <div className="bg-white/80 backdrop-blur rounded-xl2 shadow-soft border border-white p-8 animate-fade-up">
+    <div className="rounded-xl2 border border-ink-100 bg-white p-8 animate-fade-up">
       <div className="flex items-center gap-2 mb-6">
-        <span className="material-icons-round animate-spin text-blue-400">autorenew</span>
+        <span className="material-icons-round animate-spin text-primary">autorenew</span>
         <h2 className="font-semibold text-ink-900">분석을 진행하고 있어요</h2>
       </div>
 
@@ -44,10 +44,10 @@ export default function LoadingState({ shared = false }: { shared?: boolean }) {
               <span
                 className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
                   done
-                    ? 'bg-pastel-green text-green-700'
+                    ? 'bg-primary-50 text-primary'
                     : current
-                      ? 'bg-pastel-blue-soft ' + s.color
-                      : 'bg-gray-100 text-ink-300'
+                      ? 'bg-primary-50 text-primary'
+                      : 'bg-ink-100 text-ink-300'
                 }`}
               >
                 <span className={`material-icons-outlined text-[18px] ${current ? 'animate-pulse' : ''}`}>
@@ -72,7 +72,7 @@ export default function LoadingState({ shared = false }: { shared?: boolean }) {
           <div
             key={i}
             style={{ width: `${w}%` }}
-            className="h-3.5 rounded bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 bg-[length:800px_100%] animate-shimmer"
+            className="h-3.5 rounded bg-gradient-to-r from-ink-100 via-ink-200 to-ink-100 bg-[length:800px_100%] animate-shimmer"
           />
         ))}
       </div>

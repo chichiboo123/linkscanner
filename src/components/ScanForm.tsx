@@ -77,14 +77,14 @@ export default function ScanForm({ loading, onSubmit }: Props) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white/90 backdrop-blur rounded-xl2 shadow-soft border border-white p-6 sm:p-8 animate-fade-up"
+      className="rounded-xl2 border border-ink-100 bg-white p-6 sm:p-8 shadow-card animate-fade-up"
     >
       {/* 웹앱 URL */}
       <label className="block mb-5">
         <span className="flex items-center gap-1.5 text-sm font-semibold text-ink-700 mb-2">
-          <span className="material-icons-outlined text-[18px] text-blue-400">language</span>
+          <span className="material-icons-outlined text-[18px] text-primary">language</span>
           웹앱 URL
-          <span className="text-pink-500">*</span>
+          <span className="text-danger">*</span>
         </span>
         <input
           type="url"
@@ -92,14 +92,14 @@ export default function ScanForm({ loading, onSubmit }: Props) {
           onChange={(e) => setUrl(e.target.value)}
           placeholder="https://your-webapp.com"
           disabled={loading}
-          className="w-full rounded-xl border border-ink-300/60 bg-white px-4 py-3 text-ink-900 placeholder:text-ink-300 outline-none transition focus:border-pastel-blue focus:ring-4 focus:ring-pastel-blue/30 disabled:opacity-60"
+          className="w-full rounded-xl border border-ink-200 bg-white px-4 py-3 text-ink-900 placeholder:text-ink-300 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/15 disabled:opacity-60"
         />
       </label>
 
       {/* GitHub 레포 (선택) */}
       <label className="block mb-5">
         <span className="flex items-center gap-1.5 text-sm font-semibold text-ink-700 mb-2">
-          <span className="material-icons-outlined text-[18px] text-green-600">folder_open</span>
+          <span className="material-icons-outlined text-[18px] text-primary">folder_open</span>
           GitHub 레포 주소
           <span className="text-ink-300 font-normal">(선택)</span>
         </span>
@@ -109,19 +109,19 @@ export default function ScanForm({ loading, onSubmit }: Props) {
           onChange={(e) => setRepo(e.target.value)}
           placeholder="https://github.com/username/repository"
           disabled={loading}
-          className="w-full rounded-xl border border-ink-300/60 bg-white px-4 py-3 text-ink-900 placeholder:text-ink-300 outline-none transition focus:border-pastel-green focus:ring-4 focus:ring-pastel-green/30 disabled:opacity-60"
+          className="w-full rounded-xl border border-ink-200 bg-white px-4 py-3 text-ink-900 placeholder:text-ink-300 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/15 disabled:opacity-60"
         />
       </label>
 
       {/* 분야별 관점 (선택) */}
       <div className="mb-2">
-        <span className="flex items-center gap-1.5 text-sm font-semibold text-ink-700 mb-2">
-          <span className="material-icons-outlined text-[18px] text-pink-500">interests</span>
+        <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm font-semibold text-ink-700 mb-1.5">
+          <span className="material-icons-outlined text-[18px] text-primary">interests</span>
           분야별 관점 분석
-          <span className="text-ink-300 font-normal">(선택 · 리포트 최하단에 추가)</span>
+          <span className="text-ink-300 font-normal">(선택)</span>
         </span>
-        <p className="text-xs text-ink-500 mb-3">
-          선택하거나 직접 입력한 분야의 전문가 관점에서, 이 앱을 어떻게 해석할 수 있는지 상세 분석해 드립니다.
+        <p className="text-xs text-ink-500 mb-3 leading-5">
+          선택·입력한 분야의 전문가 관점 해석을 리포트 최하단에 추가합니다.
         </p>
 
         <div className="flex flex-wrap gap-2 mb-3">
@@ -133,10 +133,10 @@ export default function ScanForm({ loading, onSubmit }: Props) {
                 type="button"
                 disabled={loading}
                 onClick={() => toggle(p.label)}
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition disabled:opacity-60 ${
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition disabled:opacity-60 ${
                   on
-                    ? 'bg-pastel-pink text-pink-700 ring-2 ring-pastel-pink/60'
-                    : 'bg-pastel-pink-soft text-ink-500 hover:brightness-95'
+                    ? 'border-primary bg-primary-50 text-primary'
+                    : 'border-ink-200 bg-white text-ink-500 hover:border-primary/40 hover:text-ink-700'
                 }`}
               >
                 <span className="material-icons-outlined text-[16px]">{on ? 'check' : p.icon}</span>
@@ -153,15 +153,15 @@ export default function ScanForm({ loading, onSubmit }: Props) {
             value={customInput}
             onChange={(e) => setCustomInput(e.target.value)}
             onKeyDown={onCustomKey}
-            placeholder="직접 입력 후 Enter (예: 환경, 게임화)"
+            placeholder="직접 입력 후 Enter"
             disabled={loading}
-            className="flex-1 rounded-xl border border-ink-300/60 bg-white px-4 py-2.5 text-sm text-ink-900 placeholder:text-ink-300 outline-none transition focus:border-pastel-pink focus:ring-4 focus:ring-pastel-pink/30 disabled:opacity-60"
+            className="min-w-0 flex-1 rounded-xl border border-ink-200 bg-white px-4 py-2.5 text-sm text-ink-900 placeholder:text-ink-300 outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/15 disabled:opacity-60"
           />
           <button
             type="button"
             onClick={addCustom}
             disabled={loading || !customInput.trim()}
-            className="rounded-xl bg-pastel-pink-soft px-4 text-sm font-medium text-pink-600 transition hover:brightness-95 disabled:opacity-50"
+            className="shrink-0 rounded-xl border border-ink-200 px-4 text-sm font-medium text-ink-700 transition hover:border-primary/40 hover:text-primary disabled:opacity-50"
           >
             추가
           </button>
@@ -173,13 +173,13 @@ export default function ScanForm({ loading, onSubmit }: Props) {
             {selected.map((s) => (
               <span
                 key={s}
-                className="inline-flex items-center gap-1 rounded-full bg-pastel-yellow-soft px-2.5 py-1 text-xs text-yellow-700"
+                className="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2.5 py-1 text-xs text-primary"
               >
                 {s}
                 <button
                   type="button"
                   onClick={() => setSelected((prev) => prev.filter((x) => x !== s))}
-                  className="material-icons-outlined text-[14px] hover:text-pink-600"
+                  className="material-icons-outlined text-[14px] hover:text-danger"
                   aria-label={`${s} 제거`}
                 >
                   close
@@ -191,7 +191,7 @@ export default function ScanForm({ loading, onSubmit }: Props) {
       </div>
 
       {error && (
-        <p className="mt-4 flex items-center gap-1.5 text-sm text-pink-600">
+        <p className="mt-4 flex items-center gap-1.5 text-sm text-danger">
           <span className="material-icons-outlined text-[18px]">error_outline</span>
           {error}
         </p>
@@ -200,7 +200,7 @@ export default function ScanForm({ loading, onSubmit }: Props) {
       <button
         type="submit"
         disabled={loading}
-        className="mt-6 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pastel-blue to-pastel-green px-6 py-3.5 font-semibold text-ink-900 shadow-card transition hover:brightness-105 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70"
+        className="mt-6 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 font-semibold text-white shadow-card transition hover:bg-primary-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70"
       >
         {loading ? (
           <>

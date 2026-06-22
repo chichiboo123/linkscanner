@@ -4,7 +4,16 @@ import Footer from './components/Footer'
 import ScanForm from './components/ScanForm'
 import LoadingState from './components/LoadingState'
 import ReportView from './components/ReportView'
+import RecentReports from './components/RecentReports'
 import { requestScan, fetchSharedReport } from './lib/api'
+import {
+  getHistory,
+  addHistory,
+  removeHistory,
+  clearHistory,
+  toResponse,
+  type HistoryItem,
+} from './lib/history'
 import type { ScanResponse } from './types'
 
 type View = 'form' | 'loading' | 'report'
@@ -14,6 +23,12 @@ export default function App() {
   const [report, setReport] = useState<ScanResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [shared, setShared] = useState(false)
+  const [history, setHistory] = useState<HistoryItem[]>([])
+
+  // 최근 기록 로드
+  useEffect(() => {
+    setHistory(getHistory())
+  }, [])
 
   // 공유 링크(?r=ID)로 진입한 경우 저장된 리포트 로드
   useEffect(() => {
@@ -42,6 +57,7 @@ export default function App() {
 
     if (result.ok) {
       setReport(result)
+      setHistory(addHistory(result))
       setView('report')
     } else {
       setError(result.detail ? `${result.error} (${result.detail})` : result.error)
@@ -49,11 +65,17 @@ export default function App() {
     }
   }
 
+  function openHistory(item: HistoryItem) {
+    setReport(toResponse(item))
+    setShared(true)
+    setError(null)
+    setView('report')
+  }
+
   function reset() {
     setReport(null)
     setError(null)
     setShared(false)
-    // 공유 파라미터 제거
     if (window.location.search) {
       window.history.replaceState({}, '', window.location.pathname)
     }
@@ -67,13 +89,26 @@ export default function App() {
 
         <main className="mt-2">
           {error && view === 'form' && (
-            <div className="mb-4 flex items-start gap-2 rounded-xl border border-pink-200 bg-pastel-pink-soft px-4 py-3 text-sm text-pink-700 animate-fade-up">
+            <div className="mb-4 flex items-start gap-2 rounded-xl border border-danger/30 bg-pastel-pink-soft px-4 py-3 text-sm text-danger animate-fade-up">
               <span className="material-icons-outlined text-[20px]">report_problem</span>
               <span>{error}</span>
             </div>
           )}
 
-          {view === 'form' && <ScanForm loading={false} onSubmit={handleScan} />}
+          {view === 'form' && (
+            <>
+              <ScanForm loading={false} onSubmit={handleScan} />
+              <RecentReports
+                items={history}
+                onOpen={openHistory}
+                onRemove={(id) => setHistory(removeHistory(id))}
+                onClear={() => {
+                  clearHistory()
+                  setHistory([])
+                }}
+              />
+            </>
+          )}
           {view === 'loading' && <LoadingState shared={shared} />}
           {view === 'report' && report && (
             <ReportView result={report} onReset={reset} shared={shared} />

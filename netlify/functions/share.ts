@@ -1,5 +1,5 @@
 import type { Handler, HandlerEvent } from '@netlify/functions'
-import { getStore } from '@netlify/blobs'
+import { getStore, type Store } from '@netlify/blobs'
 
 // 리포트 공유:
 //  - POST  /api/share          → 리포트 JSON 저장 후 { id, url } 반환
@@ -13,17 +13,14 @@ const JSON_HEADERS = {
 }
 
 const STORE = 'reports'
-const MAX_BYTES = 6 * 1024 * 1024 // 6MB 안전 상한
+const MAX_BYTES = 5 * 1024 * 1024 // 5MB 안전 상한
 
 function json(statusCode: number, payload: unknown) {
   return { statusCode, headers: JSON_HEADERS, body: JSON.stringify(payload) }
 }
 
 function shortId(): string {
-  return (
-    Date.now().toString(36).slice(-4) +
-    Math.random().toString(36).slice(2, 8)
-  )
+  return Date.now().toString(36).slice(-4) + Math.random().toString(36).slice(2, 8)
 }
 
 function baseUrl(event: HandlerEvent): string {
@@ -32,18 +29,58 @@ function baseUrl(event: HandlerEvent): string {
   return `${proto}://${host}`
 }
 
+/**
+ * Blobs 스토어 초기화.
+ * 1) Netlify 런타임이 자동 주입하는 컨텍스트로 시도(getStore(name))
+ * 2) 실패 시 환경변수의 siteID/token 으로 명시적 초기화 폴백
+ * 둘 다 실패하면 throw 하여 상위에서 원인을 응답으로 전달한다.
+ */
+function resolveStore(): Store {
+  const siteID = process.env.NETLIFY_BLOBS_SITE_ID || process.env.SITE_ID || process.env.NETLIFY_SITE_ID
+  const token = process.env.NETLIFY_BLOBS_TOKEN || process.env.NETLIFY_API_TOKEN
+
+  try {
+    return getStore(STORE)
+  } catch (autoErr) {
+    if (siteID && token) {
+      return getStore({ name: STORE, siteID, token })
+    }
+    throw autoErr
+  }
+}
+
 export const handler: Handler = async (event: HandlerEvent) => {
-  const store = getStore(STORE)
+  let store: Store
+  try {
+    store = resolveStore()
+  } catch (e) {
+    return json(500, {
+      ok: false,
+      error: '공유 저장소(Netlify Blobs) 초기화에 실패했습니다.',
+      detail:
+        (e instanceof Error ? e.message : String(e)) +
+        ' — Netlify 사이트에서 Blobs가 활성화됐는지, 또는 NETLIFY_BLOBS_SITE_ID/NETLIFY_BLOBS_TOKEN 환경변수를 확인하세요.',
+    })
+  }
 
   // ── 조회 ──
   if (event.httpMethod === 'GET') {
     const id = event.queryStringParameters?.id?.trim()
     if (!id) return json(400, { ok: false, error: 'id 파라미터가 필요합니다.' })
 
-    const data = await store.get(id, { type: 'json' }).catch(() => null)
-    if (!data) return json(404, { ok: false, error: '공유된 리포트를 찾을 수 없습니다. (만료되었거나 잘못된 링크)' })
-
-    return json(200, { ok: true, report: data })
+    try {
+      const data = await store.get(id, { type: 'json' })
+      if (!data) {
+        return json(404, { ok: false, error: '공유된 리포트를 찾을 수 없습니다. (만료되었거나 잘못된 링크)' })
+      }
+      return json(200, { ok: true, report: data })
+    } catch (e) {
+      return json(500, {
+        ok: false,
+        error: '리포트 조회에 실패했습니다.',
+        detail: e instanceof Error ? e.message : String(e),
+      })
+    }
   }
 
   // ── 저장 ──
@@ -66,9 +103,8 @@ export const handler: Handler = async (event: HandlerEvent) => {
       savedAt: new Date().toISOString(),
     }
 
-    const serialized = JSON.stringify(payload)
-    if (Buffer.byteLength(serialized, 'utf8') > MAX_BYTES) {
-      // 스크린샷이 너무 크면 제외하고 저장
+    // 스크린샷 포함 시 용량이 크면 제외하고 저장 (본문/메타는 유지)
+    if (Buffer.byteLength(JSON.stringify(payload), 'utf8') > MAX_BYTES) {
       payload.screenshot = null
     }
 

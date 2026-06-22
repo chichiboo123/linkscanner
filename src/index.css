@@ -46,10 +46,10 @@ body {
   @apply list-decimal pl-6 my-2 space-y-1 text-ink-700;
 }
 .report-prose a {
-  @apply text-pastel-blue underline decoration-pastel-blue/60 hover:text-blue-500;
+  @apply text-primary underline decoration-primary/40 hover:text-primary-600;
 }
 .report-prose code {
-  @apply bg-pastel-blue-soft text-ink-900 px-1.5 py-0.5 rounded text-[0.85em] font-mono;
+  @apply bg-ink-100 text-ink-900 px-1.5 py-0.5 rounded text-[0.85em] font-mono;
 }
 .report-prose pre {
   @apply bg-ink-900 text-gray-100 rounded-xl p-4 my-3 overflow-x-auto text-sm;
@@ -58,15 +58,15 @@ body {
   @apply bg-transparent text-gray-100 p-0;
 }
 .report-prose blockquote {
-  @apply border-l-4 border-pastel-yellow pl-4 italic text-ink-500 my-3;
+  @apply border-l-4 border-primary-100 pl-4 italic text-ink-500 my-3;
 }
 .report-prose table {
   @apply w-full border-collapse my-3 text-sm;
 }
 .report-prose th,
 .report-prose td {
-  @apply border border-ink-300/50 px-3 py-2 text-left;
+  @apply border border-ink-200 px-3 py-2 text-left;
 }
 .report-prose th {
-  @apply bg-pastel-blue-soft font-semibold;
+  @apply bg-primary-50 font-semibold;
 }

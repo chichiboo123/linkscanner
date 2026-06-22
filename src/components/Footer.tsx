@@ -5,7 +5,7 @@ export default function Footer() {
         href="https://litt.ly/chichiboo"
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 text-sm text-ink-500 hover:text-blue-400 transition-colors"
+        className="inline-flex items-center gap-1.5 text-sm text-ink-500 hover:text-primary transition-colors"
       >
         <span className="material-icons-outlined text-[18px]">favorite</span>
         Created by. 교육뮤지컬 꿈꾸는 치수쌤

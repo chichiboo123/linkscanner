@@ -31,18 +31,23 @@ export async function createShareLink(
   report: ScanResponse,
 ): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   try {
+    // Netlify 함수 본문 한도(6MB) 보호: 스크린샷이 크면 제외하고 본문/메타만 공유
+    const screenshot =
+      report.screenshot && report.screenshot.length < 3_500_000 ? report.screenshot : null
+
     const res = await fetch('/api/share', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         markdown: report.markdown,
-        screenshot: report.screenshot ?? null,
+        screenshot,
         meta: report.meta,
       }),
     })
     const data = await res.json()
     if (!res.ok || !data.ok) {
-      return { ok: false, error: data.error || `공유 링크 생성 실패 (${res.status})` }
+      const msg = data.detail ? `${data.error || '공유 링크 생성 실패'} (${data.detail})` : data.error
+      return { ok: false, error: msg || `공유 링크 생성 실패 (${res.status})` }
     }
     return { ok: true, url: data.url as string }
   } catch (e) {

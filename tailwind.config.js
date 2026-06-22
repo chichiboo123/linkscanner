@@ -16,10 +16,21 @@ export default {
         ],
       },
       colors: {
-        // 파스텔 메인 팔레트 (블루/그린/핑크/옐로우)
+        // KRDS 기준 주조색: 절제된 단일 프라이머리 + 중립 그레이
+        primary: {
+          DEFAULT: '#256EF4', // KRDS 블루
+          50: '#EDF3FE',
+          100: '#D6E4FD',
+          600: '#1F5FD6',
+          700: '#1A4FB3',
+        },
+        success: '#1E8E3E',
+        warn: '#B45309',
+        danger: '#D93B3B',
+        // 보조 파스텔(아주 옅게만, 포인트용)
         pastel: {
           blue: '#A7C7E7',
-          'blue-soft': '#E3F0FB',
+          'blue-soft': '#EDF3FE',
           green: '#B5E3C5',
           'green-soft': '#E6F6EC',
           pink: '#F7C8D9',
@@ -27,12 +38,14 @@ export default {
           yellow: '#FCE9A8',
           'yellow-soft': '#FDF7E0',
         },
-        // KRDS 풍 중립 텍스트/보더
+        // 중립 텍스트/보더 (KRDS 그레이 스케일 근사)
         ink: {
           900: '#1B1D1F',
           700: '#3D4044',
           500: '#6D7178',
           300: '#B1B5BB',
+          200: '#D7DAE0',
+          100: '#EBEDF0',
         },
       },
       boxShadow: {
