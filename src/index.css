@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply font-sans text-ink-900 antialiased;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #e3f0fb 0%, transparent 55%),
+    radial-gradient(1000px 500px at 100% 0%, #fceaf1 0%, transparent 50%),
+    radial-gradient(900px 600px at 50% 120%, #e6f6ec 0%, transparent 55%),
+    #fbfcfe;
+}
+
+/* Material Icons 정렬 보정 */
+.material-icons,
+.material-icons-outlined,
+.material-icons-round {
+  vertical-align: middle;
+  line-height: 1;
+}
+
+/* 마크다운 리포트 타이포 */
+.report-prose h1 {
+  @apply text-2xl font-bold text-ink-900 mt-2 mb-4 pb-2 border-b border-ink-300/40;
+}
+.report-prose h2 {
+  @apply text-xl font-bold text-ink-900 mt-7 mb-3 flex items-center gap-2;
+}
+.report-prose h3 {
+  @apply text-lg font-semibold text-ink-700 mt-5 mb-2;
+}
+.report-prose p {
+  @apply text-ink-700 leading-7 my-2;
+}
+.report-prose ul {
+  @apply list-disc pl-6 my-2 space-y-1 text-ink-700;
+}
+.report-prose ol {
+  @apply list-decimal pl-6 my-2 space-y-1 text-ink-700;
+}
+.report-prose a {
+  @apply text-pastel-blue underline decoration-pastel-blue/60 hover:text-blue-500;
+}
+.report-prose code {
+  @apply bg-pastel-blue-soft text-ink-900 px-1.5 py-0.5 rounded text-[0.85em] font-mono;
+}
+.report-prose pre {
+  @apply bg-ink-900 text-gray-100 rounded-xl p-4 my-3 overflow-x-auto text-sm;
+}
+.report-prose pre code {
+  @apply bg-transparent text-gray-100 p-0;
+}
+.report-prose blockquote {
+  @apply border-l-4 border-pastel-yellow pl-4 italic text-ink-500 my-3;
+}
+.report-prose table {
+  @apply w-full border-collapse my-3 text-sm;
+}
+.report-prose th,
+.report-prose td {
+  @apply border border-ink-300/50 px-3 py-2 text-left;
+}
+.report-prose th {
+  @apply bg-pastel-blue-soft font-semibold;
+}

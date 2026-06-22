@@ -1,0 +1,27 @@
+# Netlify 배포 설정
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+# SPA 라우팅: 모든 경로를 index.html로
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# 함수 설정: 스크린샷(Chromium 콜드스타트) 대비 타임아웃 상향
+# 무료 플랜 기본 10초. 분석이 길면 Netlify 대시보드에서 함수 타임아웃 확장 요청 권장.
+[functions]
+  node_bundler = "esbuild"
+  # chromium 바이너리/브라우저 패키지는 번들에서 제외하고 런타임 로드
+  external_node_modules = ["@sparticuz/chromium", "puppeteer-core"]
+
+[functions."scan"]
+  # 가능한 한 길게 (플랜에 따라 상한이 다름)
+  timeout = 26
