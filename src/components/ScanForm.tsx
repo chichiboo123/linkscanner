@@ -11,10 +11,13 @@ const REPO_RE = /github\.com\/[^/]+\/[^/]+/i
 const PRESET_PERSPECTIVES = [
   { label: '교육', icon: 'school' },
   { label: '예술', icon: 'palette' },
+  { label: '디자인', icon: 'design_services' },
   { label: '철학', icon: 'psychology' },
   { label: '디지털', icon: 'memory' },
   { label: '심리', icon: 'favorite' },
-  { label: '비즈니스', icon: 'trending_up' },
+  { label: '마케팅', icon: 'campaign' },
+  { label: '브랜딩', icon: 'loyalty' },
+  { label: 'SDGs', icon: 'public' },
   { label: '접근성', icon: 'accessibility_new' },
 ]
 

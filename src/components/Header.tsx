@@ -1,7 +1,16 @@
-export default function Header() {
+interface Props {
+  onHome?: () => void
+}
+
+export default function Header({ onHome }: Props) {
   return (
     <header className="w-full pt-8 pb-6 animate-fade-up">
-      <div className="flex items-center gap-3">
+      <button
+        type="button"
+        onClick={onHome}
+        aria-label="첫 화면으로"
+        className="flex items-center gap-3 text-left transition-opacity hover:opacity-80"
+      >
         <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-50">
           <span className="material-icons-round text-2xl text-primary">travel_explore</span>
         </span>
@@ -11,7 +20,7 @@ export default function Header() {
           </h1>
           <p className="mt-1 text-sm text-ink-500">웹앱·소스코드 종합 분석 리포트</p>
         </div>
-      </div>
+      </button>
     </header>
   )
 }

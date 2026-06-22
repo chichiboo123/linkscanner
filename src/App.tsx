@@ -85,7 +85,7 @@ export default function App() {
   return (
     <div className="min-h-full flex flex-col">
       <div className="flex-1 w-full max-w-3xl mx-auto px-4 sm:px-6">
-        <Header />
+        <Header onHome={reset} />
 
         <main className="mt-2">
           {error && view === 'form' && (
