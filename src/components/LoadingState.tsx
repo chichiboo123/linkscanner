@@ -8,15 +8,25 @@ const STEPS = [
   { icon: 'description', label: '마크다운 리포트 생성', color: 'text-blue-500' },
 ]
 
-export default function LoadingState() {
+export default function LoadingState({ shared = false }: { shared?: boolean }) {
   const [active, setActive] = useState(0)
 
   useEffect(() => {
+    if (shared) return
     const t = setInterval(() => {
       setActive((a) => Math.min(a + 1, STEPS.length - 1))
     }, 3500)
     return () => clearInterval(t)
-  }, [])
+  }, [shared])
+
+  if (shared) {
+    return (
+      <div className="bg-white/90 backdrop-blur rounded-xl2 shadow-soft border border-white p-8 animate-fade-up flex items-center gap-3">
+        <span className="material-icons-round animate-spin text-blue-400">autorenew</span>
+        <h2 className="font-semibold text-ink-900">공유된 리포트를 불러오는 중…</h2>
+      </div>
+    )
+  }
 
   return (
     <div className="bg-white/80 backdrop-blur rounded-xl2 shadow-soft border border-white p-8 animate-fade-up">

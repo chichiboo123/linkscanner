@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Header from './components/Header'
 import Footer from './components/Footer'
 import ScanForm from './components/ScanForm'
 import LoadingState from './components/LoadingState'
 import ReportView from './components/ReportView'
-import { requestScan } from './lib/api'
+import { requestScan, fetchSharedReport } from './lib/api'
 import type { ScanResponse } from './types'
 
 type View = 'form' | 'loading' | 'report'
@@ -13,12 +13,32 @@ export default function App() {
   const [view, setView] = useState<View>('form')
   const [report, setReport] = useState<ScanResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [shared, setShared] = useState(false)
 
-  async function handleScan(url: string, repo: string) {
+  // 공유 링크(?r=ID)로 진입한 경우 저장된 리포트 로드
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('r')
+    if (!id) return
+    setView('loading')
+    setShared(true)
+    fetchSharedReport(id).then((res) => {
+      if ('ok' in res) {
+        setReport(res)
+        setView('report')
+      } else {
+        setError(res.error)
+        setShared(false)
+        setView('form')
+      }
+    })
+  }, [])
+
+  async function handleScan(url: string, repo: string, perspectives: string[]) {
     setError(null)
+    setShared(false)
     setView('loading')
 
-    const result = await requestScan({ url, repo: repo || undefined })
+    const result = await requestScan({ url, repo: repo || undefined, perspectives })
 
     if (result.ok) {
       setReport(result)
@@ -32,6 +52,11 @@ export default function App() {
   function reset() {
     setReport(null)
     setError(null)
+    setShared(false)
+    // 공유 파라미터 제거
+    if (window.location.search) {
+      window.history.replaceState({}, '', window.location.pathname)
+    }
     setView('form')
   }
 
@@ -49,8 +74,10 @@ export default function App() {
           )}
 
           {view === 'form' && <ScanForm loading={false} onSubmit={handleScan} />}
-          {view === 'loading' && <LoadingState />}
-          {view === 'report' && report && <ReportView result={report} onReset={reset} />}
+          {view === 'loading' && <LoadingState shared={shared} />}
+          {view === 'report' && report && (
+            <ReportView result={report} onReset={reset} shared={shared} />
+          )}
         </main>
       </div>
 

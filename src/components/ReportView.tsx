@@ -2,15 +2,45 @@ import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { ScanResponse } from '../types'
+import { createShareLink } from '../lib/api'
 
 interface Props {
   result: ScanResponse
   onReset: () => void
+  shared?: boolean
 }
 
-export default function ReportView({ result, onReset }: Props) {
+type ShareState = 'idle' | 'creating' | 'done' | 'error'
+
+export default function ReportView({ result, onReset, shared = false }: Props) {
   const [copied, setCopied] = useState(false)
+  const [shareState, setShareState] = useState<ShareState>('idle')
+  const [shareUrl, setShareUrl] = useState('')
   const { markdown, screenshot, meta } = result
+
+  async function handleShare() {
+    // 이미 만든 링크가 있으면 클립보드에 다시 복사
+    if (shareUrl) {
+      await navigator.clipboard.writeText(shareUrl).catch(() => {})
+      setShareState('done')
+      return
+    }
+    setShareState('creating')
+    const res = await createShareLink(result)
+    if (res.ok) {
+      setShareUrl(res.url)
+      setShareState('done')
+      await navigator.clipboard.writeText(res.url).catch(() => {})
+      // 주소창도 공유 URL로 갱신
+      try {
+        window.history.replaceState({}, '', new URL(res.url).search)
+      } catch {
+        /* noop */
+      }
+    } else {
+      setShareState('error')
+    }
+  }
 
   async function copyMarkdown() {
     try {
@@ -39,11 +69,25 @@ export default function ReportView({ result, onReset }: Props) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-sm text-ink-500">
           <span className="material-icons-round text-green-500">task_alt</span>
-          <span className="font-semibold text-ink-900">분석 완료</span>
-          <span className="text-ink-300">·</span>
-          <span>{(meta.elapsedMs / 1000).toFixed(1)}초</span>
+          <span className="font-semibold text-ink-900">{shared ? '공유된 리포트' : '분석 완료'}</span>
+          {!shared && (
+            <>
+              <span className="text-ink-300">·</span>
+              <span>{(meta.elapsedMs / 1000).toFixed(1)}초</span>
+            </>
+          )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleShare}
+            disabled={shareState === 'creating'}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-pastel-pink-soft px-3 py-2 text-sm font-medium text-pink-600 transition hover:brightness-95 disabled:opacity-60"
+          >
+            <span className={`material-icons-outlined text-[18px] ${shareState === 'creating' ? 'animate-spin' : ''}`}>
+              {shareState === 'creating' ? 'autorenew' : shareState === 'done' ? 'done' : 'share'}
+            </span>
+            {shareState === 'creating' ? '생성 중…' : shareState === 'done' ? '링크 복사됨' : '공유 링크'}
+          </button>
           <button
             onClick={copyMarkdown}
             className="inline-flex items-center gap-1.5 rounded-lg bg-pastel-blue-soft px-3 py-2 text-sm font-medium text-blue-600 transition hover:brightness-95"
@@ -68,6 +112,31 @@ export default function ReportView({ result, onReset }: Props) {
         </div>
       </div>
 
+      {/* 공유 링크 결과 */}
+      {shareState === 'done' && shareUrl && (
+        <div className="flex items-center gap-2 rounded-xl bg-pastel-pink-soft px-3 py-2.5 text-sm animate-fade-up">
+          <span className="material-icons-outlined text-[18px] text-pink-500">link</span>
+          <input
+            readOnly
+            value={shareUrl}
+            onFocus={(e) => e.currentTarget.select()}
+            className="flex-1 bg-transparent text-pink-700 outline-none truncate"
+          />
+          <button
+            onClick={() => navigator.clipboard.writeText(shareUrl)}
+            className="shrink-0 rounded-lg bg-white/70 px-2.5 py-1 text-xs font-medium text-pink-600 hover:bg-white"
+          >
+            복사
+          </button>
+        </div>
+      )}
+      {shareState === 'error' && (
+        <p className="flex items-center gap-1.5 text-xs text-pink-600">
+          <span className="material-icons-outlined text-[16px]">error_outline</span>
+          공유 링크 생성에 실패했습니다. 잠시 후 다시 시도해 주세요.
+        </p>
+      )}
+
       {/* 메타 배지 */}
       <div className="flex flex-wrap gap-2 text-xs">
         <ModelBadge model={meta.model} fallbacks={meta.fallbacks} chain={meta.modelChain} />
@@ -82,6 +151,9 @@ export default function ReportView({ result, onReset }: Props) {
           icon="folder"
           text={meta.repoAnalyzed ? 'GitHub 소스 분석됨' : 'GitHub 미분석'}
         />
+        {meta.perspectives && meta.perspectives.length > 0 && (
+          <Badge ok icon="interests" text={`관점: ${meta.perspectives.join(', ')}`} />
+        )}
       </div>
 
       {/* 폴백 안내: 1순위가 실패해 다른 모델로 처리된 경우 */}

@@ -20,10 +20,12 @@ interface GeminiInput {
   title: string
   pageText: string
   structure: string
-  /** "data:image/jpeg;base64,..." 또는 null */
+  /** "data:image/...;base64,..." 또는 null */
   screenshot: string | null
   repoSummary?: string
   repoSources?: string
+  /** 분야별 관점 분석 키워드 (예: 교육, 예술, 철학, 디지털) */
+  perspectives?: string[]
 }
 
 export interface GeminiResult {
@@ -46,6 +48,17 @@ const SYSTEM_GUIDE = `너는 시니어 풀스택 개발자이자 제품 분석�
 
 function buildPrompt(input: GeminiInput): string {
   const hasRepo = !!input.repoSources
+  const perspectives = (input.perspectives || []).filter(Boolean)
+  const perspectiveBlock = perspectives.length
+    ? `
+
+## 🔭 분야별 심층 관점 분석
+아래 각 분야의 전문가 관점에서 이 앱을 어떻게 해석·활용·평가할 수 있는지,
+분야마다 \`###\` 소제목으로 나누어 상세히 서술하라.
+각 분야당 최소 3~4문장으로, 그 분야 고유의 개념·가치·활용 시나리오·한계를 앱의 구체적 기능과 연결하라.
+대상 분야: ${perspectives.join(', ')}`
+    : ''
+
   return `${SYSTEM_GUIDE}
 
 아래 형식의 리포트를 작성하라:
@@ -72,6 +85,7 @@ ${hasRepo ? '## 💻 소스코드 리뷰\n- 코드 품질, 패턴, 개선 포인
 
 ## 📝 종합 평가
 - 한 문단 총평
+${perspectiveBlock}
 
 ---
 [입력 데이터]
@@ -144,9 +158,10 @@ export async function analyzeWithGemini(input: GeminiInput): Promise<GeminiResul
 
   const parts: Array<Record<string, unknown>> = [{ text: prompt }]
   if (input.screenshot && input.screenshot.startsWith('data:')) {
-    const [, base64] = input.screenshot.split(',')
-    if (base64) {
-      parts.push({ inline_data: { mime_type: 'image/jpeg', data: base64 } })
+    const match = input.screenshot.match(/^data:([^;]+);base64,(.*)$/)
+    if (match) {
+      const [, mime, base64] = match
+      parts.push({ inline_data: { mime_type: mime || 'image/jpeg', data: base64 } })
     }
   }
 

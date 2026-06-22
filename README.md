@@ -9,9 +9,11 @@
 
 ## ✨ 주요 기능
 
-- 🌐 **웹 스크래핑 + 스크린샷** — Headless Chromium으로 렌더링된 화면을 캡처하고 콘텐츠를 수집
+- 🌐 **웹 콘텐츠 수집 + 스크린샷** — fetch로 콘텐츠를, 렌더링 API(Microlink)로 실제 화면을 캡처
 - 📦 **GitHub 소스 분석** — 레포 메타데이터 + 핵심 파일/소스코드 자동 수집
-- 🤖 **Gemini 멀티모달 분석** — 스크린샷(이미지)과 코드/텍스트를 함께 분석
+- 🤖 **Gemini 멀티모달 분석** — 스크린샷(이미지)과 코드/텍스트를 함께 분석 (모델 폴백 체인)
+- 🔭 **분야별 관점 분석** — 교육·예술·철학·디지털 등 분야를 선택/입력하면 해당 관점의 상세 해석 추가
+- 🔗 **링크 공유** — 리포트를 서버에 저장하고 짧은 링크로 공유 → 다른 기기에서 그대로 열람
 - 📄 **마크다운 리포트** — 복사 / `.md` 다운로드 지원
 - 🎨 파스텔 톤 UI, Pretendard GOV 폰트, Material Icons, KRDS 풍 레이아웃
 
@@ -26,18 +28,20 @@
 │       │  POST /api/scan                                             │
 │       ▼                                                             │
 │  [Netlify Function: scan]  (오케스트레이터)                          │
-│       ├─ scrape.ts   puppeteer-core + @sparticuz/chromium → 스크린샷 │
+│       ├─ scrape.ts   fetch(콘텐츠) + Microlink API(스크린샷)         │
 │       ├─ github.ts   GitHub REST API → 메타 + 소스코드               │
 │       └─ gemini.ts   Gemini generateContent(멀티모달) → 마크다운      │
+│  [Netlify Function: share]  리포트 저장/조회 (Netlify Blobs)         │
 │                                                                     │
-│  환경변수: GEMINI_API_KEY · GEMINI_MODEL · GITHUB_TOKEN              │
+│  환경변수: GEMINI_API_KEY · GEMINI_MODEL · GITHUB_TOKEN · MICROLINK  │
 │  (서버 함수 내부에서만 사용 — 브라우저에 절대 노출되지 않음)            │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
 **왜 Netlify인가:** 프론트와 서버리스 백엔드를 한 레포·한 배포로 통합하고, API 키를
-암호화된 환경변수로 관리할 수 있습니다. 무거운 Chromium은 번들에서 제외(`external_node_modules`)하고
-`@sparticuz/chromium`이 런타임에 바이너리를 로드합니다.
+암호화된 환경변수로 관리할 수 있습니다. 서버리스에서 불안정한 Headless Chromium을 직접 띄우는
+대신 **스크린샷은 외부 렌더링 API(Microlink)** 로 처리해 함수가 가벼운 HTTP 호출만 하도록 했고,
+**공유 기능은 Netlify Blobs**(무설정 내장 스토리지)를 사용합니다.
 
 ---
 
@@ -48,6 +52,10 @@
 | `GEMINI_API_KEY` | ✅ | [Google AI Studio](https://aistudio.google.com/apikey)에서 발급 |
 | `GEMINI_MODEL` | ⬜ | 모델 **우선순위 목록**(쉼표 구분). 비우면 기본 체인 사용 |
 | `GITHUB_TOKEN` | ⬜ | [GitHub PAT](https://github.com/settings/tokens). rate limit 완화/비공개 레포용 |
+| `MICROLINK_API_KEY` | ⬜ | 스크린샷 렌더링 한도 상향용. 없으면 무료(일 50건)로 동작 |
+
+> **공유 링크**는 [Netlify Blobs](https://docs.netlify.com/blobs/overview/)에 리포트를 저장합니다.
+> 별도 설정 없이 Netlify에 배포하면 자동으로 활성화됩니다. (로컬은 `netlify dev` 필요)
 
 `.env.example`를 참고하세요. **실제 키는 절대 커밋하지 마세요.**
 
@@ -88,8 +96,8 @@ netlify dev            # http://localhost:8888
 npm run dev            # http://localhost:5173
 ```
 
-> 로컬에서 `@sparticuz/chromium` 바이너리가 없으면 스크래핑은 자동으로
-> `fetch` 텍스트 추출로 폴백합니다(스크린샷 없음). 실제 스크린샷은 배포 환경에서 동작합니다.
+> 스크린샷은 외부 렌더링 API(Microlink)로 캡처하므로 로컬에서도 동작합니다.
+> 공유 기능(Netlify Blobs)은 `netlify dev`로 실행해야 로컬 테스트가 가능합니다.
 
 ---
 
@@ -101,11 +109,10 @@ npm run dev            # http://localhost:5173
 4. **Site settings → Environment variables** 에 `GEMINI_API_KEY` 등 등록
 5. 배포 완료 후 사이트 접속
 
-### ⏱️ 타임아웃 참고
-스크린샷 캡처는 Chromium 콜드스타트로 수~수십 초가 걸릴 수 있습니다.
-무료 플랜 함수 타임아웃이 부족하면:
-- Netlify 대시보드에서 함수 타임아웃 상향(플랜에 따라 상이), 또는
-- `.env`에서 스크린샷을 생략하도록 운영(`fetch` 폴백 사용)하는 방안을 고려하세요.
+### ⏱️ 참고
+- 스크린샷은 Microlink 렌더링 API가 페이지를 그려 반환하므로 사이트에 따라 수 초가 걸릴 수 있습니다.
+  실패하면 자동으로 스크린샷 없이 텍스트 기반 분석을 진행합니다.
+- 무료 한도(일 50건)를 늘리려면 `MICROLINK_API_KEY`를 등록하세요.
 
 ---
 
@@ -121,11 +128,12 @@ linkscanner/
 │   ├── lib/api.ts               # /api/scan 호출
 │   └── types.ts                 # 공유 타입
 └── netlify/functions/
-    ├── scan.ts                  # 오케스트레이터 (엔드포인트)
+    ├── scan.ts                  # 분석 오케스트레이터 (엔드포인트)
+    ├── share.ts                 # 리포트 공유 저장/조회 (Netlify Blobs)
     └── lib/
-        ├── scrape.ts            # 스크래핑 + 스크린샷
+        ├── scrape.ts            # fetch 콘텐츠 + Microlink 스크린샷
         ├── github.ts            # GitHub 수집
-        └── gemini.ts            # Gemini 분석
+        └── gemini.ts            # Gemini 분석 (모델 폴백 + 분야별 관점)
 ```
 
 ---

@@ -3,6 +3,8 @@
 export interface ScanRequest {
   url: string
   repo?: string
+  /** 분야별 관점 분석 키워드 (예: 교육, 예술, 철학, 디지털) */
+  perspectives?: string[]
 }
 
 export interface ScanMeta {
@@ -22,6 +24,8 @@ export interface ScanMeta {
   modelChain: string[]
   /** 성공 전에 폴백(실패)된 모델 목록 */
   fallbacks: string[]
+  /** 분야별 관점 분석에 사용된 키워드 */
+  perspectives?: string[]
   /** 처리 시간(ms) */
   elapsedMs: number
 }

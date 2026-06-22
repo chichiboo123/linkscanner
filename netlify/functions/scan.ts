@@ -36,7 +36,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
     return err(500, '서버에 GEMINI_API_KEY가 설정되지 않았습니다. Netlify 환경변수를 확인하세요.')
   }
 
-  let body: { url?: string; repo?: string }
+  let body: { url?: string; repo?: string; perspectives?: string[] }
   try {
     body = JSON.parse(event.body || '{}')
   } catch {
@@ -45,6 +45,9 @@ export const handler: Handler = async (event: HandlerEvent) => {
 
   const url = (body.url || '').trim()
   const repo = (body.repo || '').trim()
+  const perspectives = Array.isArray(body.perspectives)
+    ? body.perspectives.map((p) => String(p).trim()).filter(Boolean).slice(0, 8)
+    : []
 
   if (!URL_RE.test(url)) {
     return err(400, '올바른 웹앱 URL을 입력하세요. (예: https://example.com)')
@@ -72,6 +75,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
       screenshot: page.screenshot,
       repoSummary: repoAnalyzed ? repoResult!.summary : undefined,
       repoSources: repoAnalyzed ? repoResult!.sources : undefined,
+      perspectives,
     })
 
     return {
@@ -90,6 +94,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
           model: analysis.model,
           modelChain,
           fallbacks: analysis.fallbacks.map((f) => f.model),
+          perspectives,
           elapsedMs: Date.now() - started,
         },
       }),

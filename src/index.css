@@ -14,11 +14,8 @@ body,
 
 body {
   @apply font-sans text-ink-900 antialiased;
-  background:
-    radial-gradient(1200px 600px at 10% -10%, #e3f0fb 0%, transparent 55%),
-    radial-gradient(1000px 500px at 100% 0%, #fceaf1 0%, transparent 50%),
-    radial-gradient(900px 600px at 50% 120%, #e6f6ec 0%, transparent 55%),
-    #fbfcfe;
+  /* 단색 배경 (경계 없이 균일하게) */
+  background-color: #f3f6fb;
 }
 
 /* Material Icons 정렬 보정 */
