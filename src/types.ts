@@ -16,8 +16,12 @@ export interface ScanMeta {
   screenshotCaptured: boolean
   /** GitHub 소스 수집 성공 여부 */
   repoAnalyzed: boolean
-  /** 사용된 Gemini 모델 */
+  /** 실제 응답을 생성한 Gemini 모델 */
   model: string
+  /** 시도된 모델 우선순위 체인 */
+  modelChain: string[]
+  /** 성공 전에 폴백(실패)된 모델 목록 */
+  fallbacks: string[]
   /** 처리 시간(ms) */
   elapsedMs: number
 }

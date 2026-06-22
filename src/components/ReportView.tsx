@@ -42,8 +42,6 @@ export default function ReportView({ result, onReset }: Props) {
           <span className="font-semibold text-ink-900">분석 완료</span>
           <span className="text-ink-300">·</span>
           <span>{(meta.elapsedMs / 1000).toFixed(1)}초</span>
-          <span className="text-ink-300">·</span>
-          <span>{meta.model}</span>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -72,6 +70,7 @@ export default function ReportView({ result, onReset }: Props) {
 
       {/* 메타 배지 */}
       <div className="flex flex-wrap gap-2 text-xs">
+        <ModelBadge model={meta.model} fallbacks={meta.fallbacks} chain={meta.modelChain} />
         <Badge ok icon="link" text={meta.url} truncate />
         <Badge
           ok={meta.screenshotCaptured}
@@ -84,6 +83,18 @@ export default function ReportView({ result, onReset }: Props) {
           text={meta.repoAnalyzed ? 'GitHub 소스 분석됨' : 'GitHub 미분석'}
         />
       </div>
+
+      {/* 폴백 안내: 1순위가 실패해 다른 모델로 처리된 경우 */}
+      {meta.fallbacks.length > 0 && (
+        <p className="flex items-start gap-1.5 rounded-xl bg-pastel-yellow-soft px-3 py-2 text-xs text-yellow-700">
+          <span className="material-icons-outlined text-[16px] mt-0.5">info</span>
+          <span>
+            1순위 모델 호출이 실패하여 폴백되었습니다.{' '}
+            <span className="font-medium">{meta.fallbacks.join(' → ')}</span> 실패 →{' '}
+            <span className="font-semibold">{meta.model}</span> 으로 분석 완료.
+          </span>
+        </p>
+      )}
 
       {/* 스크린샷 미리보기 */}
       {screenshot && (
@@ -101,6 +112,38 @@ export default function ReportView({ result, onReset }: Props) {
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown>
       </article>
     </div>
+  )
+}
+
+function ModelBadge({
+  model,
+  fallbacks,
+  chain,
+}: {
+  model: string
+  fallbacks: string[]
+  chain: string[]
+}) {
+  const isPrimary = chain.length === 0 || model === chain[0]
+  const tooltip =
+    `호출된 모델: ${model}\n` +
+    `우선순위: ${chain.join(' → ') || '(기본)'}` +
+    (fallbacks.length ? `\n폴백됨: ${fallbacks.join(', ')}` : '')
+  return (
+    <span
+      title={tooltip}
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-medium ${
+        isPrimary ? 'bg-pastel-blue-soft text-blue-600' : 'bg-pastel-yellow-soft text-yellow-700'
+      }`}
+    >
+      <span className="material-icons-outlined text-[15px]">auto_awesome</span>
+      <span>{model}</span>
+      {isPrimary ? (
+        <span className="rounded-full bg-pastel-blue/50 px-1.5 text-[10px] text-blue-700">1순위</span>
+      ) : (
+        <span className="rounded-full bg-pastel-yellow/60 px-1.5 text-[10px] text-yellow-800">폴백</span>
+      )}
+    </span>
   )
 }
 

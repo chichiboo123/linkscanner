@@ -1,9 +1,21 @@
 // Gemini API 호출 (REST, 멀티모달).
 // 스크린샷(jpeg base64)이 있으면 inline_data 로 함께 전달해 UI/UX까지 시각 분석한다.
+//
+// 모델 폴백: 1순위부터 순서대로 시도하고, 호출이 실패하면(미제공/한도초과/안전차단 등)
+// 다음 모델로 자동 폴백한다. 실제로 성공한 모델명을 함께 반환한다.
+
+/** 기본 모델 우선순위. 환경변수 GEMINI_MODEL(쉼표 구분)로 덮어쓸 수 있다. */
+export const DEFAULT_MODELS = [
+  'gemini-3.1-flash-lite', // 1순위
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+]
 
 interface GeminiInput {
   apiKey: string
-  model: string
+  /** 시도할 모델 우선순위 목록 */
+  models: string[]
   url: string
   title: string
   pageText: string
@@ -12,6 +24,14 @@ interface GeminiInput {
   screenshot: string | null
   repoSummary?: string
   repoSources?: string
+}
+
+export interface GeminiResult {
+  markdown: string
+  /** 실제로 응답을 생성한 모델 */
+  model: string
+  /** 성공 전에 실패한 모델들 (폴백 내역) */
+  fallbacks: Array<{ model: string; reason: string }>
 }
 
 const SYSTEM_GUIDE = `너는 시니어 풀스택 개발자이자 제품 분석가다.
@@ -73,21 +93,13 @@ ${
 `
 }
 
-export async function analyzeWithGemini(input: GeminiInput): Promise<string> {
-  const prompt = buildPrompt(input)
-
-  const parts: Array<Record<string, unknown>> = [{ text: prompt }]
-
-  if (input.screenshot && input.screenshot.startsWith('data:')) {
-    const [, base64] = input.screenshot.split(',')
-    if (base64) {
-      parts.push({
-        inline_data: { mime_type: 'image/jpeg', data: base64 },
-      })
-    }
-  }
-
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${input.model}:generateContent?key=${input.apiKey}`
+/** 단일 모델 호출. 실패 시 throw. */
+async function callModel(
+  model: string,
+  apiKey: string,
+  parts: Array<Record<string, unknown>>,
+): Promise<string> {
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 
   const res = await fetch(endpoint, {
     method: 'POST',
@@ -110,7 +122,7 @@ export async function analyzeWithGemini(input: GeminiInput): Promise<string> {
 
   if (!res.ok) {
     const errText = await res.text().catch(() => '')
-    throw new Error(`Gemini API 오류 (HTTP ${res.status}): ${errText.slice(0, 300)}`)
+    throw new Error(`HTTP ${res.status}: ${errText.slice(0, 200)}`)
   }
 
   const json = await res.json()
@@ -121,8 +133,39 @@ export async function analyzeWithGemini(input: GeminiInput): Promise<string> {
 
   if (!text) {
     const reason = candidate?.finishReason || json?.promptFeedback?.blockReason || '응답 없음'
-    throw new Error(`Gemini가 분석 결과를 반환하지 않았습니다. (사유: ${reason})`)
+    throw new Error(`결과 미반환 (사유: ${reason})`)
   }
 
   return text.trim()
+}
+
+export async function analyzeWithGemini(input: GeminiInput): Promise<GeminiResult> {
+  const prompt = buildPrompt(input)
+
+  const parts: Array<Record<string, unknown>> = [{ text: prompt }]
+  if (input.screenshot && input.screenshot.startsWith('data:')) {
+    const [, base64] = input.screenshot.split(',')
+    if (base64) {
+      parts.push({ inline_data: { mime_type: 'image/jpeg', data: base64 } })
+    }
+  }
+
+  const models = input.models.length ? input.models : DEFAULT_MODELS
+  const fallbacks: Array<{ model: string; reason: string }> = []
+
+  for (const model of models) {
+    try {
+      const markdown = await callModel(model, input.apiKey, parts)
+      return { markdown, model, fallbacks }
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : String(e)
+      console.warn(`[gemini] 모델 '${model}' 실패 → 다음 후보로 폴백:`, reason)
+      fallbacks.push({ model, reason })
+    }
+  }
+
+  throw new Error(
+    `모든 모델 호출에 실패했습니다.\n` +
+      fallbacks.map((f) => `- ${f.model}: ${f.reason}`).join('\n'),
+  )
 }

@@ -46,10 +46,28 @@
 | 변수 | 필수 | 설명 |
 |------|:---:|------|
 | `GEMINI_API_KEY` | ✅ | [Google AI Studio](https://aistudio.google.com/apikey)에서 발급 |
-| `GEMINI_MODEL` | ⬜ | 기본값 `gemini-2.0-flash`. 예: `gemini-2.5-flash`, `gemini-3-flash` |
+| `GEMINI_MODEL` | ⬜ | 모델 **우선순위 목록**(쉼표 구분). 비우면 기본 체인 사용 |
 | `GITHUB_TOKEN` | ⬜ | [GitHub PAT](https://github.com/settings/tokens). rate limit 완화/비공개 레포용 |
 
 `.env.example`를 참고하세요. **실제 키는 절대 커밋하지 마세요.**
+
+### 🔁 모델 폴백 체인
+
+`GEMINI_MODEL`을 비워두면 다음 순서로 시도하고, 호출이 실패하면(미제공·한도초과·안전차단 등)
+자동으로 다음 모델로 **폴백**합니다:
+
+```
+gemini-3.1-flash-lite  (1순위)
+   → gemini-2.5-flash
+   → gemini-2.0-flash
+   → gemini-1.5-flash
+```
+
+쉼표로 직접 지정할 수도 있습니다: `GEMINI_MODEL=gemini-3.1-flash-lite,gemini-2.5-flash`
+
+> **실제 호출된 모델 확인:** 리포트 상단에 호출된 모델이 배지(`1순위`/`폴백`)로 표시되고,
+> 폴백이 발생하면 어떤 모델이 실패해 무엇으로 처리됐는지 안내 문구가 함께 나옵니다.
+> 응답 JSON의 `meta.model`(실제 사용), `meta.modelChain`(시도 순서), `meta.fallbacks`(실패 목록)로도 확인할 수 있습니다.
 
 ---
 

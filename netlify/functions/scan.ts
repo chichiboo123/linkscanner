@@ -1,7 +1,7 @@
 import type { Handler, HandlerEvent } from '@netlify/functions'
 import { scrapePage } from './lib/scrape'
 import { collectRepo } from './lib/github'
-import { analyzeWithGemini } from './lib/gemini'
+import { analyzeWithGemini, DEFAULT_MODELS } from './lib/gemini'
 
 const JSON_HEADERS = {
   'Content-Type': 'application/json; charset=utf-8',
@@ -24,7 +24,12 @@ export const handler: Handler = async (event: HandlerEvent) => {
   }
 
   const apiKey = process.env.GEMINI_API_KEY
-  const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash'
+  // GEMINI_MODEL(쉼표 구분)로 우선순위 목록을 덮어쓸 수 있다. 없으면 기본 체인 사용.
+  const models = (process.env.GEMINI_MODEL || '')
+    .split(',')
+    .map((m) => m.trim())
+    .filter(Boolean)
+  const modelChain = models.length ? models : DEFAULT_MODELS
   const githubToken = process.env.GITHUB_TOKEN
 
   if (!apiKey) {
@@ -56,10 +61,10 @@ export const handler: Handler = async (event: HandlerEvent) => {
 
     const repoAnalyzed = !!(repoResult && repoResult.ok && repoResult.sources)
 
-    // 3) Gemini 종합 분석
-    const markdown = await analyzeWithGemini({
+    // 3) Gemini 종합 분석 (모델 폴백 체인)
+    const analysis = await analyzeWithGemini({
       apiKey,
-      model,
+      models: modelChain,
       url: page.finalUrl,
       title: page.title,
       pageText: page.text,
@@ -74,7 +79,7 @@ export const handler: Handler = async (event: HandlerEvent) => {
       headers: JSON_HEADERS,
       body: JSON.stringify({
         ok: true,
-        markdown,
+        markdown: analysis.markdown,
         screenshot: page.screenshot,
         meta: {
           title: page.title,
@@ -82,7 +87,9 @@ export const handler: Handler = async (event: HandlerEvent) => {
           repo: repo || undefined,
           screenshotCaptured: !!page.screenshot,
           repoAnalyzed,
-          model,
+          model: analysis.model,
+          modelChain,
+          fallbacks: analysis.fallbacks.map((f) => f.model),
           elapsedMs: Date.now() - started,
         },
       }),
