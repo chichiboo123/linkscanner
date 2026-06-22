@@ -31,22 +31,19 @@ function baseUrl(event: HandlerEvent): string {
 
 /**
  * Blobs 스토어 초기화.
- * 1) Netlify 런타임이 자동 주입하는 컨텍스트로 시도(getStore(name))
- * 2) 실패 시 환경변수의 siteID/token 으로 명시적 초기화 폴백
- * 둘 다 실패하면 throw 하여 상위에서 원인을 응답으로 전달한다.
+ * 환경변수에 siteID/token 이 있으면 명시 모드를 우선 사용한다.
+ * (자동 모드 getStore(name) 은 생성 시점엔 에러를 내지 않고 실제 읽기/쓰기 시점에
+ *  "환경 미설정" 에러를 던지므로, 명시 모드를 우선해야 안정적이다.)
+ * 없으면 Netlify 런타임이 주입하는 자동 컨텍스트로 시도한다.
  */
 function resolveStore(): Store {
   const siteID = process.env.NETLIFY_BLOBS_SITE_ID || process.env.SITE_ID || process.env.NETLIFY_SITE_ID
   const token = process.env.NETLIFY_BLOBS_TOKEN || process.env.NETLIFY_API_TOKEN
 
-  try {
-    return getStore(STORE)
-  } catch (autoErr) {
-    if (siteID && token) {
-      return getStore({ name: STORE, siteID, token })
-    }
-    throw autoErr
+  if (siteID && token) {
+    return getStore({ name: STORE, siteID, token })
   }
+  return getStore(STORE)
 }
 
 export const handler: Handler = async (event: HandlerEvent) => {
