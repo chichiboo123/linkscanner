@@ -15,6 +15,7 @@
 - 🔭 **분야별 관점 분석** — 교육·예술·철학·디지털 등 분야를 선택/입력하면 해당 관점의 상세 해석 추가
 - 🔗 **링크 공유** — 리포트를 서버에 저장하고 짧은 링크로 공유 → 다른 기기에서 그대로 열람
 - 🕘 **최근 분석 기록** — localStorage에 최근 리포트를 보관해 언제든 다시 열람
+- 🔐 **관리자 대시보드** — 우측 하단 숨김 아이콘으로 로그인, 관리자 분석을 백엔드에 자동 저장하고 카드/리스트로 관리(이름변경·삭제)
 - 📄 **마크다운 리포트** — 복사 / `.md` 다운로드 지원
 - 🎨 KRDS 가이드라인 기반의 절제된 UI, Pretendard GOV 폰트, Material Icons
 
@@ -54,6 +55,7 @@
 | `GEMINI_MODEL` | ⬜ | 모델 **우선순위 목록**(쉼표 구분). 비우면 기본 체인 사용 |
 | `GITHUB_TOKEN` | ⬜ | [GitHub PAT](https://github.com/settings/tokens). rate limit 완화/비공개 레포용 |
 | `MICROLINK_API_KEY` | ⬜ | 스크린샷 렌더링 한도 상향용. 없으면 무료(일 50건)로 동작 |
+| `ADMIN_PASSWORD` | ⬜ | 관리자 대시보드 로그인 비밀번호. 설정해야 관리자 기능 활성화 |
 
 > **공유 링크**는 [Netlify Blobs](https://docs.netlify.com/blobs/overview/)에 리포트를 저장합니다.
 > 별도 설정 없이 Netlify에 배포하면 자동으로 활성화됩니다. (로컬은 `netlify dev` 필요)
@@ -131,11 +133,22 @@ linkscanner/
 └── netlify/functions/
     ├── scan.ts                  # 분석 오케스트레이터 (엔드포인트)
     ├── share.ts                 # 리포트 공유 저장/조회 (Netlify Blobs)
+    ├── admin.ts                 # 관리자 인증·저장·목록·이름변경·삭제 (Netlify Blobs)
     └── lib/
         ├── scrape.ts            # fetch 콘텐츠 + Microlink 스크린샷
         ├── github.ts            # GitHub 수집
-        └── gemini.ts            # Gemini 분석 (모델 폴백 + 분야별 관점)
+        ├── gemini.ts            # Gemini 분석 (모델 폴백 + 분야별 관점)
+        └── blobs.ts             # Netlify Blobs 스토어 공통 초기화
 ```
+
+## 🔐 관리자 대시보드
+
+1. Netlify 환경변수에 `ADMIN_PASSWORD` 등록 후 재배포
+2. 화면 **우측 하단의 숨겨진 아이콘**(🔒, 평소엔 거의 안 보임)을 클릭 → 비밀번호 로그인
+3. 로그인 상태는 localStorage에 저장되어 **로그아웃 전까지 유지**
+4. 관리자 상태에서 분석하면 결과가 **백엔드(Netlify Blobs)에 자동 저장**
+5. 대시보드에서 **카드/리스트 뷰** 전환, 항목 **열기·이름변경·삭제**
+   - 같은 웹앱을 여러 번 분석하면 **분석 횟수만큼 개별 항목**으로 쌓입니다.
 
 ---
 

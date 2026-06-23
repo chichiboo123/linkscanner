@@ -1,5 +1,6 @@
 import type { Handler, HandlerEvent } from '@netlify/functions'
-import { getStore, type Store } from '@netlify/blobs'
+import { type Store } from '@netlify/blobs'
+import { resolveStore } from './lib/blobs'
 
 // 리포트 공유:
 //  - POST  /api/share          → 리포트 JSON 저장 후 { id, url } 반환
@@ -29,27 +30,10 @@ function baseUrl(event: HandlerEvent): string {
   return `${proto}://${host}`
 }
 
-/**
- * Blobs 스토어 초기화.
- * 환경변수에 siteID/token 이 있으면 명시 모드를 우선 사용한다.
- * (자동 모드 getStore(name) 은 생성 시점엔 에러를 내지 않고 실제 읽기/쓰기 시점에
- *  "환경 미설정" 에러를 던지므로, 명시 모드를 우선해야 안정적이다.)
- * 없으면 Netlify 런타임이 주입하는 자동 컨텍스트로 시도한다.
- */
-function resolveStore(): Store {
-  const siteID = process.env.NETLIFY_BLOBS_SITE_ID || process.env.SITE_ID || process.env.NETLIFY_SITE_ID
-  const token = process.env.NETLIFY_BLOBS_TOKEN || process.env.NETLIFY_API_TOKEN
-
-  if (siteID && token) {
-    return getStore({ name: STORE, siteID, token })
-  }
-  return getStore(STORE)
-}
-
 export const handler: Handler = async (event: HandlerEvent) => {
   let store: Store
   try {
-    store = resolveStore()
+    store = resolveStore(STORE)
   } catch (e) {
     return json(500, {
       ok: false,
