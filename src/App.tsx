@@ -33,6 +33,11 @@ export default function App() {
   const [showLogin, setShowLogin] = useState(false)
   const isAdmin = !!adminKey
 
+  // 관리자 자동 저장 상태 (리포트 화면에 노출)
+  type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
+  const [saveError, setSaveError] = useState('')
+
   // 최근 기록 + 관리자 세션 로드
   useEffect(() => {
     setHistory(getHistory())
@@ -57,9 +62,24 @@ export default function App() {
     })
   }, [])
 
+  // 관리자 로그인 상태에서 분석 결과를 백엔드에 저장. 성공/실패를 화면에 노출한다.
+  async function runAdminSave(key: string, result: ScanResponse) {
+    setSaveStatus('saving')
+    setSaveError('')
+    const res = await adminSave(key, result)
+    if (res.ok) {
+      setSaveStatus('saved')
+    } else {
+      setSaveStatus('error')
+      setSaveError(res.error || '알 수 없는 오류로 저장에 실패했습니다.')
+    }
+  }
+
   async function handleScan(url: string, repo: string, perspectives: string[]) {
     setError(null)
     setShared(false)
+    setSaveStatus('idle')
+    setSaveError('')
     setView('loading')
 
     const result = await requestScan({ url, repo: repo || undefined, perspectives })
@@ -67,11 +87,9 @@ export default function App() {
     if (result.ok) {
       setReport(result)
       setHistory(addHistory(result))
-      // 관리자 로그인 상태면 백엔드에 자동 저장
-      if (adminKey) {
-        adminSave(adminKey, result).catch(() => {})
-      }
       setView('report')
+      // 관리자 로그인 상태면 백엔드에 자동 저장 (성공/실패를 리포트 화면에 표시)
+      if (adminKey) runAdminSave(adminKey, result)
     } else {
       setError(result.detail ? `${result.error} (${result.detail})` : result.error)
       setView('form')
@@ -82,6 +100,7 @@ export default function App() {
     setReport(toResponse(item))
     setShared(true)
     setError(null)
+    setSaveStatus('idle')
     setView('report')
   }
 
@@ -151,7 +170,14 @@ export default function App() {
           )}
           {view === 'loading' && <LoadingState shared={shared} />}
           {view === 'report' && report && (
-            <ReportView result={report} onReset={reset} shared={shared} />
+            <ReportView
+              result={report}
+              onReset={reset}
+              shared={shared}
+              saveStatus={isAdmin && !shared ? saveStatus : 'idle'}
+              saveError={saveError}
+              onRetrySave={() => runAdminSave(adminKey, report)}
+            />
           )}
           {view === 'dashboard' && isAdmin && (
             <Dashboard
