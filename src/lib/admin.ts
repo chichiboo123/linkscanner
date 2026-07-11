@@ -43,9 +43,18 @@ export function clearAdminKey() {
 async function post(body: unknown, key?: string) {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (key) headers['x-admin-key'] = key
-  const res = await fetch('/api/admin', { method: 'POST', headers, body: JSON.stringify(body) })
-  const data = await res.json().catch(() => ({ ok: false, error: `오류 (${res.status})` }))
-  return { status: res.status, data }
+  try {
+    const res = await fetch('/api/admin', { method: 'POST', headers, body: JSON.stringify(body) })
+    const data = await res.json().catch(() => ({ ok: false, error: `오류 (${res.status})` }))
+    // 서버가 detail 을 함께 주면 오류 메시지에 붙여 원인 파악을 돕는다.
+    if (!data.ok && data.detail && data.error) data.error = `${data.error} (${data.detail})`
+    return { status: res.status, data }
+  } catch (e) {
+    return {
+      status: 0,
+      data: { ok: false, error: `네트워크 오류: ${e instanceof Error ? e.message : String(e)}` },
+    }
+  }
 }
 
 /** 비밀번호 검증. 성공 시 키 저장. */

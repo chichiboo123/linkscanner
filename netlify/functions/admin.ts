@@ -57,7 +57,10 @@ interface AdminIndexItem {
 }
 
 async function readIndex(store: Store): Promise<AdminIndexItem[]> {
-  const idx = await store.get(INDEX_KEY, { type: 'json' }).catch(() => null)
+  // 미존재 키는 null 을 반환하므로 [] 로 처리한다.
+  // 저장소 연결/설정 오류는 throw 되며, 이 경우 상위 try/catch 에서 500(detail 포함)으로
+  // 노출되어야 한다. (예전엔 여기서 오류를 삼켜 '목록 비어있음'으로 오인되었다.)
+  const idx = await store.get(INDEX_KEY, { type: 'json' })
   return Array.isArray(idx) ? (idx as AdminIndexItem[]) : []
 }
 

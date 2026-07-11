@@ -4,15 +4,28 @@ import remarkGfm from 'remark-gfm'
 import type { ScanResponse } from '../types'
 import { createShareLink } from '../lib/api'
 
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+
 interface Props {
   result: ScanResponse
   onReset: () => void
   shared?: boolean
+  /** 관리자 자동 저장 상태 (관리자 로그인 상태로 새로 분석한 경우에만 표시) */
+  saveStatus?: SaveStatus
+  saveError?: string
+  onRetrySave?: () => void
 }
 
 type ShareState = 'idle' | 'creating' | 'done' | 'error'
 
-export default function ReportView({ result, onReset, shared = false }: Props) {
+export default function ReportView({
+  result,
+  onReset,
+  shared = false,
+  saveStatus = 'idle',
+  saveError = '',
+  onRetrySave,
+}: Props) {
   const [copied, setCopied] = useState(false)
   const [shareState, setShareState] = useState<ShareState>('idle')
   const [shareUrl, setShareUrl] = useState('')
@@ -132,6 +145,34 @@ export default function ReportView({ result, onReset, shared = false }: Props) {
             새 분석
           </SecondaryButton>
         </div>
+
+        {/* 관리자 자동 저장 상태 */}
+        {saveStatus === 'saving' && (
+          <div className="mt-3 flex items-center gap-2 rounded-lg border border-ink-100 bg-ink-100/40 px-3 py-2 text-sm text-ink-500">
+            <span className="material-icons-round animate-spin text-[18px] text-primary">autorenew</span>
+            관리자 대시보드에 저장 중…
+          </div>
+        )}
+        {saveStatus === 'saved' && (
+          <div className="mt-3 flex items-center gap-2 rounded-lg border border-success/30 bg-success/5 px-3 py-2 text-sm text-success">
+            <span className="material-icons-round text-[18px]">cloud_done</span>
+            관리자 대시보드에 저장되었습니다.
+          </div>
+        )}
+        {saveStatus === 'error' && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-danger/30 bg-pastel-pink-soft px-3 py-2 text-sm text-danger">
+            <span className="material-icons-outlined text-[18px]">cloud_off</span>
+            <span className="min-w-0 flex-1">대시보드 저장 실패: {saveError || '알 수 없는 오류'}</span>
+            {onRetrySave && (
+              <button
+                onClick={onRetrySave}
+                className="shrink-0 rounded-md bg-white px-2.5 py-1 text-xs font-medium text-danger hover:bg-danger/10"
+              >
+                다시 저장
+              </button>
+            )}
+          </div>
+        )}
 
         {/* 공유 결과/오류 */}
         {shareState === 'done' && shareUrl && (
